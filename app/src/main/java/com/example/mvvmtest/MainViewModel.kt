@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 class MainViewModel(val userDao: UserDao): ViewModel() {
@@ -19,10 +20,10 @@ class MainViewModel(val userDao: UserDao): ViewModel() {
         getUser()
     }
 
-    private fun getUser(){
+    fun getUser(){
         viewModelScope.launch {
             val list = _userDao.getUserAll()
-            _users.emit(list)
+            _users.value = list
         }
     }
 }

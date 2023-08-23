@@ -2,13 +2,17 @@ package com.example.mvvmtest
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.mvvmtest.databinding.ActivityMainBinding
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -19,12 +23,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         _binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         val rcv = binding.rcv
         rcv.layoutManager = LinearLayoutManager(this)
         rcv.setHasFixedSize(true)
+
         val userDao = AppDatabase.getDatabase(this).userDao()
         viewModel = MainViewModel(userDao)
-
         binding.btnInsert.setOnClickListener {
             lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.STARTED){
@@ -37,23 +42,26 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnGet.setOnClickListener {
-            lifecycleScope.launch {
-                repeatOnLifecycle(Lifecycle.State.STARTED){
-                    viewModel.users.collect{ users->
-                        run {
-                            for (user in users) {
-                                user.run {
-                                    println("user: ${user.uid}")
-                                    println("user: ${user.name}")
-                                    println("user: ${user.age}")
-                                }
-
-                            }
-                            rcv.adapter = MyAdapter(users)
-                        }
-                    }
+        collectLatestLifecycleFlow(viewModel.users){
+            for (user in it) {
+                user.run {
+                    println("user: ${user.uid}")
+                    println("user: ${user.name}")
+                    println("user: ${user.age}")
                 }
+            }
+            rcv.adapter = MyAdapter(it)
+        }
+
+        binding.btnGet.setOnClickListener{
+            viewModel.getUser()
+        }
+    }
+
+    fun <T> ComponentActivity.collectLatestLifecycleFlow(flow: Flow<T>, collect: suspend (T)-> Unit){
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED){
+                flow.collectLatest(collect)
             }
         }
     }
